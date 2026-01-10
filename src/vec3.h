@@ -5,188 +5,181 @@
 
 struct vec3
 {
-    double e[3];
+    double X = 0.0, Y = 0.0, Z = 0.0;
 
-    vec3(): e{0, 0, 0} {}
-    vec3(double x, double y, double z) : e{x, y, z} {}
-
-    double x() const { return e[0]; }
-    double y() const { return e[1]; }
-    double z() const { return e[2]; }
-
-    vec3 operator-() const { return vec3(-e[0], -e[1], -e[2]); }
-    double operator[](int i) const { return e[i]; }
-    double& operator[](int i) { return e[i]; }
-
-    vec3& operator+=(const vec3& v)
+    vec3 operator-() const
     {
-        e[0] += v.e[0];
-        e[1] += v.e[1];
-        e[2] += v.e[2];
+        return {-X, -Y, -Z};
+    }
+
+    vec3& operator+=(const vec3& V)
+    {
+        X += V.X;
+        Y += V.Y;
+        Z += V.Z;
         return *this;
     }
 
-    vec3& operator*=(double t)
+    vec3& operator*=(double T)
     {
-        e[0] *= t;
-        e[1] *= t;
-        e[2] *= t;
+        X *= T;
+        Y *= T;
+        Z *= T;
         return *this;
     }
 
-    vec3& operator/=(double t)
+    vec3& operator/=(double T)
     {
-        return *this *= 1/t;
+        // Note: t being zero will be bad
+        return *this *= 1/T;
     }
 
-    double length() const
+    double LengthSquared() const
     {
-        return std::sqrt(length_squared());
+        return X*X + Y*Y + Z*Z;
     }
 
-    double length_squared() const
+    double Length() const
     {
-        return e[0]*e[0] + e[1]*e[1] + e[2]*e[2];
+        return sqrt(LengthSquared());
     }
 
-    bool near_zero() const
+    bool NearZero() const
     {
-        // return true if the vector is close to zero in all dimensions
-        auto s = 1e-8;
-        return (std::fabs(e[0]) < s) && (std::fabs(e[1]) < s) && (std::fabs(e[2]) < s);
-    }
-
-    static vec3 random()
-    {
-        return vec3(random_double(), random_double(), random_double());
-    }
-
-    static vec3 random(double min, double max)
-    {
-        return vec3(random_double(min,max), random_double(min,max), random_double(min,max));
+        // Returns true if the vector is close to zero in all dimensions
+        double s = 1e-8;
+        return (fabs(X) < s) && (fabs(Y) < s) && (fabs(Z) < s);
     }
 };
 
-// point3 is just an alias for vec3, but usefule for geometric clarity in the code
-using point3 = vec3;
+// Alias that will be useful for geometric clarity in the code
+typedef vec3 point3;
 
-// vector utility functions
-
-inline std::ostream& operator<<(std::ostream& out, const vec3& v)
+vec3 RandomVec3()
 {
-    return out << v.e[0] << " " << v.e[1] << " " << v.e[2];
+    return { RandomDouble(), RandomDouble(), RandomDouble() };
 }
 
-inline vec3 operator+(const vec3& u, const vec3& v)
+vec3 RandomVec3(double Min, double Max)
 {
-    return vec3(u.e[0] + v.e[0], u.e[1] + v.e[1], u.e[2] + v.e[2]);
+    return { RandomDouble(Min,Max), RandomDouble(Min,Max), RandomDouble(Min,Max) };
 }
 
-inline vec3 operator-(const vec3& u, const vec3& v)
+// Vector utility functions
+inline vec3 operator+(const vec3& U, const vec3& V)
 {
-    return vec3(u.e[0] - v.e[0], u.e[1] - v.e[1], u.e[2] - v.e[2]);
+    return { U.X + V.X, U.Y + V.Y, U.Z + V.Z };
 }
 
-inline vec3 operator*(const vec3& u, const vec3& v)
+inline vec3 operator-(const vec3& U, const vec3& V)
 {
-    return vec3(u.e[0] * v.e[0], u.e[1] * v.e[1], u.e[2] * v.e[2]);
+    return { U.X - V.X, U.Y - V.Y, U.Z - V.Z };
 }
 
-inline vec3 operator*(double t, const vec3& v)
+inline vec3 operator*(const vec3& U, const vec3& V)
 {
-    return vec3(t*v.e[0], t*v.e[1], t*v.e[2]);
+    return { U.X * V.X, U.Y * V.Y, U.Z * V.Z };
 }
 
-inline vec3 operator*(const vec3& v, double t)
+inline vec3 operator*(double T, const vec3& V)
 {
-    return t * v;
+    return { T*V.X, T*V.Y, T*V.Z };
 }
 
-inline vec3 operator/(const vec3& v, double t)
+inline vec3 operator*(const vec3& V, double T)
 {
-    return (1/t) * v;
+    return T * V;
 }
 
-inline double dot(const vec3& u, const vec3& v)
+inline vec3 operator/(const vec3& V, double T)
 {
-    return u.e[0] * v.e[0]
-         + u.e[1] * v.e[1]
-         + u.e[2] * v.e[2];
+    // Note: Again, T being zero will be bad
+    return (1/T) * V;
 }
 
-inline vec3 cross(const vec3& u, const vec3& v)
+inline double Dot(const vec3& U, const vec3& V)
 {
-    return vec3(u.e[1] * v.e[2] - u.e[2] * v.e[1],
-                u.e[2] * v.e[0] - u.e[0] * v.e[2],
-                u.e[0] * v.e[1] - u.e[1] * v.e[0]);
+    return U.X*V.X + U.Y*V.Y + U.Z*V.Z;
 }
 
-inline vec3 unit_vector(const vec3& v)
+inline vec3 Cross(const vec3& U, const vec3& V)
 {
-    double len_sq = v.length_squared();
-    if (len_sq > 0)
+    return { U.Y*V.Z - U.Z*V.Y,
+             U.Z*V.X - U.X*V.Z,
+             U.X*V.Y - U.Y*V.X };
+}
+
+inline vec3 UnitVector(const vec3& V)
+{
+    double LenSq = V.LengthSquared();
+    if(LenSq > 0)
     {
-        double inv_len = 1 / std::sqrt(len_sq);
-        return v * inv_len;
+        double InvLen = 1/sqrt(LenSq);
+        return V * InvLen;
     }
-    return v;
+    return V;
 }
 
-inline vec3 random_unit_vector()
+inline vec3 RandomUnitVector()
 {
-    // approach is to generate random vector in the unit cube, and normalize and return if the vector is in unit sphere
-    // while(true)
-    // {
-    //     auto p = vec3::random(-1, 1);
-    //     auto lensq = p.length_squared();
-    //     if (1e-160 < lensq <= 1)
-    //         return p / sqrt(lensq);
-    // }
-
-    // probably better approach: generate random spherical coordinates
-    double theta = 2 * pi * random_double();  // azimuthal angle [0, 2π]
-    double z = 2 * random_double() - 1;       // z ∈ [-1,1]
-    double r = sqrt(1 - z*z);                 // radius of the circle at height z
-    
-    return vec3(r*cos(theta), r*sin(theta), z);
+#if 0
+    // This approach generates random vectors in the unit cube, normalizes it
+    // and returns if the vector is in unit sphere
+    while(true)
+    {
+        vec3 V = RandomVec3(-1, 1);
+        double LenSq = V.LengthSquared();
+        if(1e-160 < LenSq <= 1)
+            return V / sqrt(LenSq);
+    }
+#else
+    // Probably a better approach: Generate random spherical coordinates
+    double theta = 2 * Pi * RandomDouble(); // Azimuthal angle
+    double z  = 2 * RandomDouble() - 1;     // z ∈ [-1,1]
+    double r = sqrt(1 - z*z);
+    return {r*cos(theta), r*sin(theta), z};
+#endif
 }
 
-inline vec3 random_in_unit_disk()
+inline vec3 RandomInUnitDisk()
 {
-    // while (true)
-    // {
-    //     auto p = vec3(random_double(-1,1), random_double(-1,1), 0);
-    //     if (p.length_squared() < 1)
-    //         return p;
-    // }
-
-    // using polar coordinates
-    double r = sqrt(random_double()); // sqrt for uniform distribution in disk; idk how this works tbh
-    double theta = 2 * pi * random_double();
-    
-    return vec3(r * cos(theta), r * sin(theta), 0);
+#if 0
+    while(true)
+    {
+        vec3 V = { RandomDouble(-1,1), RandomDouble(-1,1), 0 } 
+        if(V.LengthSquared() < 1)
+            return V;
+    }
+#else
+    // Using polar coordinates
+    double r = sqrt(RandomDouble()); // Sqrt for uniform distribution in disk (idk how this works tbh)
+    double theta = 2 * Pi * RandomDouble();
+    return { r*cos(theta), r*sin(theta), 0 };
+#endif
 }
 
-inline vec3 random_on_hemisphere(const vec3& normal)
+inline vec3 RandomOnHemisphere(const vec3& Normal)
 {
-    vec3 on_unit_sphere = random_unit_vector();
-    if (dot(on_unit_sphere, normal) > 0.0) // in the same hemisphere as the normal
-        return on_unit_sphere;
+    vec3 OnUnitSphere = RandomUnitVector();
+    if(Dot(OnUnitSphere, Normal) > 0.0) // In the same hemisphere as the normal
+        return OnUnitSphere;
     else
-        return -on_unit_sphere;
+        return -OnUnitSphere;
 }
 
-inline vec3 reflect(const vec3& v, const vec3& n)
+inline vec3 Reflect(const vec3& V, const vec3& N)
 {
-    return v - 2*dot(v,n)*n; // v and n point in opposite direction, hence the minus sign to get the correct direction for the vector b (= -projection_of_v_on_n * n) (see figure 15)
+    // V and N point in opposite directions, hence the minus sigh to get the correct direction for the vector b
+    // Which is (-ProjectionOf_V_On_N * n) (see figure 15)
+    return V - 2*Dot(V,N)*N;
 }
 
-inline vec3 refract(const vec3& r, const vec3& n, double eta_over_eta_prime)
+inline vec3 Refract(const vec3& R, const vec3& N, double EtaOverEtaPrime)
 {
-    auto cos_theta = std::fmin(dot(-r, n), 1.0);
-    vec3 r_out_perp = eta_over_eta_prime * (r + cos_theta*n);
-    vec3 r_out_parallel = -std::sqrt(std::fabs(1.0 - r_out_perp.length_squared())) * n;
-    return r_out_perp + r_out_parallel;
+    double CosTheta = fmin(Dot(-R,N), 1.0);
+    vec3 ROutPerp = EtaOverEtaPrime * (R + CosTheta*N);
+    vec3 ROutParallel = -sqrt(fabs(1.0 - ROutPerp.LengthSquared())) * N;
+    return ROutPerp + ROutParallel;
 }
 
 #endif

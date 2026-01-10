@@ -1,55 +1,50 @@
 #ifndef SPHERE_H
 #define SPHERE_H
 
-#include "rtweekend.h"
-#include "hittable.h"
+#include "vec3.h"
+#include "material.h"
 
-struct sphere: public hittable
+struct sphere
 {
-    sphere(const point3& center, double radius, shared_ptr<material> mat)
-        :center(center), radius(std::fmax(0, radius)), mat(mat)
-    {
-    }
+    point3 Center;
+    double Radius;
+    material Material;
 
-    // return false if no solutions, or roots are outside the [tmin,tmax] range
-    // fill the hit_record rec and return true if one of the roots is found (nearest in this case)
-    bool hit(const ray& r, interval ray_t, hit_record& rec) const override
+    // Return false if no solutions, or roots outside the [tmin,tmax] range
+    // Fill the hit_record Record and return true if one of the roots is found (nearest in this case)
+    bool Hit(ray *R, interval RayT, hit_record *Record)
     {
-        vec3 oc = center - r.origin();
-        
-        // simplified the quadratic formula calculations using the substitution b = -2h and the dot(v, v) = v.length_squared()
-        auto a = r.direction().length_squared();
-        auto h = dot(r.direction(), oc);
-        auto c = oc.length_squared() - radius*radius;
+        vec3 OC = Center - R->Orig;
 
-        auto discriminant = h*h - a*c;
-        if (discriminant < 0)
+        // Simplified the quadratic formula calculations using the substition
+        // b = -2h and the Dot(v, v) = v.LengthSquared();
+        double A = R->Dir.LengthSquared();
+        double H = Dot(R->Dir, OC);
+        double C = OC.LengthSquared() - Radius*Radius;
+
+        double Discriminant = H*H - A*C;
+        if (Discriminant < 0)
             return false;
+        
+        double SqrtDisc = sqrt(Discriminant);
 
-        auto sqrtd = std::sqrt(discriminant);
-
-        // find the nearest root that lies in the acceptable range
-        auto root = (h - sqrtd) / a;
-        if (!ray_t.surrounds(root))
+        // Find the nearest root that lies in the acceptable range
+        double Root = (H - SqrtDisc) / A;
+        if(!RayT.Surrounds(Root))
         {
-            root = (h + sqrtd) / a;
-            if (!ray_t.surrounds(root))
+            Root = (H + SqrtDisc) / A;
+            if(!RayT.Surrounds(Root))
                 return false;
         }
 
-        rec.t = root;
-        rec.p = r.at(rec.t);
-        vec3 outward_normal = (rec.p - center) / radius;
-        rec.set_face_normal(r, outward_normal);
-        rec.mat = mat;
+        Record->T = Root;
+        Record->P = R->At(Record->T);
+        vec3 OutwardsNormal = (Record->P - Center) / Radius;
+        Record->SetFaceNormal(R, &OutwardsNormal);
+        Record->Material = &Material;
 
         return true;
     }
-
-private:
-    point3 center;
-    double radius;
-    shared_ptr<material> mat;
 };
 
 #endif

@@ -1,100 +1,89 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
-#include "hittable.h"
+#include "vec3.h"
+#include "color.h"
+#include "hit.h"
+
+enum material_type
+{
+    LAMBERTIAN = 0, METAL, DIELECTRIC, NUM_MAT_TYPES
+};
+
+double Reflectance(double cosine, double RefractionIndex)
+{
+    // Use Schlick's approximation for reflectance
+    double R0 = (1 - RefractionIndex) / (1 + RefractionIndex);
+    R0 = R0 * R0;
+    return R0 + (1-R0)*pow((1-cosine), 5);
+}
 
 struct material
 {
-    virtual ~material() = default;
+    material_type Type;         // Tag
+    color Albedo;               // Fractional reflectance in all the r,g,b channels
+    double Fuzz;                // (For METALs only) Amount of fuzziness in reflections
+    double RefractionIndex;     // (For DIELECTRICs only) Refractive index in vaccum or air
+                                // Or the ratio of the material's refractive index over the refractive index of the enclosing media
 
-    virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const
+    bool Scatter(ray *RIn, hit_record *Record, color *Attenuation, ray *Scattered)
     {
-        return false;
-    }
-};
+        switch(Type)
+        {
+            case LAMBERTIAN:
+            {
+                // We are here always scattering and always scaling by Albedo
+                // Other approaches inlude:
+                // 1) Scatter with probability of albedo and don't scale
+                // 2) Scatter with probability of P and scale energy by Albedo/p (note that this approach is the combination of 0 and 1)
+        
+                vec3 ScatterDirection = Record->Normal + RandomUnitVector();
 
-struct lambertian : public material
-{
-    lambertian(const color& albedo)
-        : albedo(albedo) {}
+                // Catch degenerate scatter direction
+                if (ScatterDirection.NearZero())
+                    ScatterDirection = Record->Normal;
 
-    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override
-    {
-        // we are here always scattering and always scaling by albedo
-        // other approaches include:
-        // 1) scatter with probability of albedo and dont't scale
-        // 2) scatter with probability p and scale energy by albedo/p (not that this approach is the combination of 0 and 1)
+                Scattered->Orig = Record->P;
+                Scattered->Dir = ScatterDirection;
+                (*Attenuation) = Albedo;
+                return true;
+            } break;
 
-        auto scatter_direction = rec.normal + random_unit_vector();
+            case METAL:
+            {
+                vec3 Reflected = Reflect(RIn->Dir, Record->Normal);
+                Reflected = UnitVector(Reflected) + (Fuzz * RandomUnitVector());
+                Scattered->Orig = Record->P;
+                Scattered->Dir = Reflected;
+                (*Attenuation) = Albedo;
+                // Because of fuzziness, a ray on a big object or a ray with a direction very close to the surface
+                // May reflect into the object, so discard/absorb such rays
+                return Dot(Scattered->Dir, Record->Normal) > 0;
+            } break;
 
-        // catch degenerate scatter direction
-        if (scatter_direction.near_zero())
-            scatter_direction = rec.normal;
+            case DIELECTRIC:
+            {
+                (*Attenuation) = { 1.0, 1.0, 1.0 };
+                // If front face then it should be eta/eta_prime, otherwise its eta_prime/eta
+                // This is for the refraction function
+                double RI = Record->FrontFace ? (1.0 / RefractionIndex) : RefractionIndex;
 
-        scattered = ray(rec.p, scatter_direction);
-        attenuation = albedo;
-        return true;
-    }
+                vec3 UnitDirection = UnitVector(RIn->Dir);
 
-private:
-    color albedo;   // fractional reflectance in all the r, g, and b channels
-};
+                double CosTheta = fmin(Dot(-UnitDirection, Record->Normal), 1.0);
+                double SinTheta = sqrt(1.0 - CosTheta * CosTheta);
 
-struct metal : public material
-{
-    metal(const color& albedo, double fuzz)
-        : albedo(albedo), fuzz(fuzz < 1 ? fuzz : 1) {}
+                bool CannotRefract = RI * SinTheta > 1.0; // Total internal reflection
+                vec3 Direction;
+                if (CannotRefract || Reflectance(CosTheta, RI) > RandomDouble())
+                    Direction = Reflect(UnitDirection, Record->Normal);
+                else
+                    Direction = Refract(UnitDirection, Record->Normal, RI);
 
-    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override
-    {
-        vec3 reflected = reflect(r_in.direction(), rec.normal);
-        reflected = unit_vector(reflected) + (fuzz * random_unit_vector());
-        scattered = ray(rec.p, reflected);
-        attenuation = albedo;
-        return dot(scattered.direction(), rec.normal) > 0; // because of fuzziness, a ray on a big object or a ray with a direction very close to the surface, may reflect into the object, so discard/absorb such rays
-    }
-
-private:
-    color albedo;
-    double fuzz;
-};
-
-struct dielectric : public material
-{
-    dielectric(double refraction_index)
-        : refraction_index(refraction_index) {}
-
-    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override
-    {
-        attenuation = color(1.0, 1.0, 1.0);
-        double ri = rec.front_face ? (1.0 / refraction_index) : refraction_index;   // if front face then it should be eta/eta_prime, otherwise it's eta_prime/eta; this is for the refraction function
-
-        vec3 unit_direction = unit_vector(r_in.direction());
-
-        double cos_theta = std::fmin(dot(-unit_direction, rec.normal), 1.0);
-        double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
-
-        bool cannot_refract = ri * sin_theta > 1.0; // total internal reflection
-        vec3 direction;
-
-        if (cannot_refract || reflectance(cos_theta, ri) > random_double())
-            direction = reflect(unit_direction, rec.normal);
-        else
-            direction = refract(unit_direction, rec.normal, ri);
-
-        scattered = ray(rec.p, direction);
-        return true;
-    }
-
-private:
-    double refraction_index; // refractive index in vaccum or air, or the ratio of the material's refractive index over the refractive index of the enclosing media
-
-    static double reflectance(double cosine, double refraction_index)
-    {
-        // use schlick's approximation for reflectance
-        auto r0 = (1 - refraction_index) / (1 + refraction_index);
-        r0 = r0 * r0;
-        return r0 + (1-r0)*std::pow((1-cosine), 5);
+                (*Scattered) = { Record->P, Direction };
+                return true;
+            } break;
+        }
     }
 };
 

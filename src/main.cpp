@@ -1,93 +1,79 @@
 #include "rtweekend.h"
-
-#include "camera.h"
-#include "hittable.h"
-#include "hittable_list.h"
 #include "material.h"
 #include "sphere.h"
 
 int main()
 {
-    hittable_list world;
+    // srand(time(0));
 
-    auto ground_material = make_shared<lambertian>(color(0.5,0.50,0.5));
-    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
+    int eleven = 11; // Avoid magic number >.<
+    // The ground, the three main ones, and all the randomly generated spheres
+    int MaxSpheres = (eleven - (-eleven)) * (eleven - (-eleven)) + 4;
+    sphere Spheres[MaxSpheres];
 
-    for (int a = -11; a < 11; a++)
+    material GroundMaterial = {LAMBERTIAN, {0.5, 0.5, 0.5}};
+    int Index = 0;
+    Spheres[Index++] = { {0,-1000,0}, 1000, GroundMaterial };
+
+    for(int A = -eleven; A < eleven; ++A)
     {
-        for (int b = -11; b < 11; b++)
+        for(int B = -eleven; B < eleven; ++B)
         {
-            auto choose_mat = random_double();
-            point3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
+            double ChooseMatProbability = RandomDouble();
+            point3 Center = {A + 0.9*RandomDouble(), 0.2, B + 0.9*RandomDouble()};
+            point3 Reference = {4, 0.2, 0};
 
-            if ((center - point3(4, 0.2, 0)).length() > 0.9)
+            if((Center - Reference).Length() > 0.9)
             {
-                shared_ptr<material> sphere_material;
+                // TODO: Break if Index > MaxSphere - 3?
 
-                if (choose_mat < 0.8)
+                material SphereMaterial = {};
+
+                if (ChooseMatProbability < 0.8)
                 {
-                    // diffuse
-                    auto albedo = color::random() * color::random();
-                    sphere_material = make_shared<lambertian>(albedo);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
+                    // Diffuse
+                    color Albedo = RandomVec3() * RandomVec3();
+                    SphereMaterial.Type = LAMBERTIAN;
+                    SphereMaterial.Albedo = Albedo;
+                    Spheres[Index] = { Center, 0.2, SphereMaterial };
                 }
-                else if (choose_mat < 0.95)
+                else if (ChooseMatProbability < 0.95)
                 {
-                    // metal
-                    auto albedo = color::random(0.5, 1);
-                    auto fuzz = random_double(0, 0.5);
-                    sphere_material = make_shared<metal>(albedo, fuzz);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
+                    // Metal
+                    color Albedo = RandomVec3(0.5, 1);
+                    double Fuzz = RandomDouble(0, 0.5);
+                    SphereMaterial.Type = METAL;
+                    SphereMaterial.Albedo = Albedo;
+                    SphereMaterial.Fuzz = Fuzz;
+                    Spheres[Index] = { Center, 0.2, SphereMaterial };
                 }
                 else
                 {
-                    // glass
-                    sphere_material = make_shared<dielectric>(1.5);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
+                    // Glass
+                    SphereMaterial.Type = DIELECTRIC;
+                    SphereMaterial.RefractionIndex = 1.5;
+                    Spheres[Index] = { Center, 0.2, SphereMaterial };
                 }
+                ++Index;
             }
         }
     }
 
-    auto material1 = make_shared<dielectric>(1.5);
-    world.add(make_shared<sphere>(point3(0, 1, 0), 1, material1));
-
-    auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
-    world.add(make_shared<sphere>(point3(-4, 1, 0), 1, material2));
+    material Material = {};
+    Material.Type = DIELECTRIC;
+    Material.RefractionIndex = 1.5;
+    Spheres[Index++] = { {0,1,0}, 1, Material };
     
-    auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0);
-    world.add(make_shared<sphere>(point3(4, 1, 0), 1, material3));
+    Material.Type = LAMBERTIAN;
+    Material.Albedo = {0.4, 0.2, 0.1};
+    Spheres[Index++] = { {-4,1,0}, 1, Material };
+    
+    Material.Type = METAL;
+    Material.Albedo = {0.7,0.6,0.5};
+    Material.Fuzz = 0;
+    Spheres[Index++] = { {4,1,0}, 1, Material };
 
+    fprintf(stderr, "Spheres created: %i\n", Index);
 
-    camera cam;
-
-    cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 400;
-    cam.samples_per_pixel = 32;
-    cam.max_depth = 8;
-
-    cam.vfov = 20;
-    cam.lookfrom = point3(13,2,3);
-    cam.lookat = point3(0,0,0);
-    cam.vup = vec3(0,1,0);
-
-    cam.defocus_angle = 0.6;
-    cam.focus_dist = 10;
-
-    // calculate the time it takes to render the world to the image
-    using namespace std::chrono;
-    long long start_time = 0, end_time = 0;
-    time_point<high_resolution_clock> start_time_point, end_time_point;
-
-    start_time_point = high_resolution_clock::now();
-    cam.render(world);
-    end_time_point = high_resolution_clock::now();
-
-    start_time = time_point_cast<microseconds>(start_time_point).time_since_epoch().count();
-    end_time = time_point_cast<microseconds>(end_time_point).time_since_epoch().count();
-    auto time = end_time - start_time;
-
-    std::clog << "Rendering took " << time << "us, " << time / 1000.0 << "ms, " << time / 1000000.0 << "s";
-
-
+    // Camera...
 }

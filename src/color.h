@@ -1,37 +1,36 @@
 #ifndef COLOR_H
 #define COLOR_H
 
-#include "rtweekend.h"
+#include "vec3.h"
+#include "interval.h"
 
-using color = vec3;
+typedef vec3 color;
 
-inline double linear_to_gamma(double linear_component)
+inline double LinearToGamma(double LinearComponent)
 {
-    if (linear_component > 0)
-        return std::sqrt(linear_component);
+    if(LinearComponent > 0)
+        return std::sqrt(LinearComponent);
     return 0;
 }
 
-void write_color(std::ostream& out, const color& pixel_color)
+void WriteColor(const color& PixelColor)
 {
-    double r = pixel_color.x();
-    double g = pixel_color.y();
-    double b = pixel_color.z();
+    double R = PixelColor.X;
+    double G = PixelColor.Y;
+    double B = PixelColor.Z;
 
-    // apply a linear to gamma transform for gamma 2
-    r = linear_to_gamma(r);
-    g = linear_to_gamma(g);
-    b = linear_to_gamma(b);
+    // Apply a linear to gamma transfor for gamma 2
+    R = LinearToGamma(R);
+    G = LinearToGamma(G);
+    B = LinearToGamma(B);
 
-    // translate the [0,1] component values to the byte range [0,255]
-    static const interval intensity(0.000, 0.999);
-    int rbyte = int(256 * intensity.clamp(r));
-    int gbyte = int(256 * intensity.clamp(g));
-    int bbyte = int(256 * intensity.clamp(b));
+    // Translate the [0,1] component values to the byte range [0,255]
+    static interval intensity = {0.000, 0.999};
+    int RByte = (int)(256 * intensity.Clamp(R));
+    int GByte = (int)(256 * intensity.Clamp(G));
+    int BByte = (int)(256 * intensity.Clamp(B));
 
-    // write out the pixel color components
-
-    out << rbyte << ' ' << gbyte << ' ' << bbyte << '\n';
+    // Write out the pixel color components
+    fprintf(stdout, "%i %i %i\n", RByte, GByte, BByte);
 }
-
 #endif

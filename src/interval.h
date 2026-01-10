@@ -5,29 +5,33 @@
 
 struct interval
 {
-    double min, max;
+    double Min = +Infinity, Max = -Infinity;
+    static const interval Empty, Universe;
 
-    interval() : min(+infinity), max(-infinity) {} // default interval is empty
-
-    interval(double min, double max) : min(min), max(max) {}
-
-    double size() const { return max - min; };
-
-    bool contains(double x) const { return min <= x && x <= max; } // x in [min,max]
-
-    bool surrounds(double x) const { return min < x && x < max; }  // x in (min,max)
-
-    double clamp(double x) const
+    double Size() const
     {
-        if (x < min) return min;
-        if (x > max) return max;
-        return x;
+        return Max - Min;
     }
 
-    static const interval empty, universe;
+    bool Contains(double X) const
+    {
+        return Min <= X && X <= Max; // X in [Min,Max]
+    }
+    
+    bool Surrounds(double X) const
+    {
+        return Min < X && X < Max;   // X in (Min,Max)
+    }
+
+    double Clamp(double X) const
+    {
+        if(X < Min) return Min;
+        if(X > Max) return Max;
+        return X;
+    }
 };
 
-const interval interval::empty    = interval(+infinity, -infinity);
-const interval interval::universe = interval(-infinity, +infinity);
+const interval interval::Empty    = {+Infinity, -Infinity};
+const interval interval::Universe = {-Infinity, +Infinity};
 
 #endif
