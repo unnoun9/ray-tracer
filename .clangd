@@ -1,0 +1,18 @@
+# CompileFlags:
+#   Add:
+#     - -xc
+#     - -w
+#   Remove:
+#     - -xc++
+#     - -std=c++*
+
+# Diagnostics:
+#   ClangTidy:
+#     Remove:
+#       - modernize*
+#       - readability-identifier-length
+#       - readability-magic-numbers
+#       - cppcoreguidelines*
+#       - hicpp*
+#   UnusedIncludes: None
+#   MissingIncludes: None

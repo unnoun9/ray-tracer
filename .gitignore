@@ -3,3 +3,4 @@ bin
 *.exe
 *.o
 image.ppm
+.gitignore
